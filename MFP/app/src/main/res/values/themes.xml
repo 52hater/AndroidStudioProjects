@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MFP" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MainActivity" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your app's theme here. -->
+    </style>
+</resources>
