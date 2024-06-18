@@ -1,32 +1,36 @@
-package com.project.mfp
+package com.project.mfp;
 
 import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.ImageFormat
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Base64
+import android.util.DisplayMetrics
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.codec.Encoder
 import com.project.mfp.R
+import com.project.mfp.ScreenCaptureService
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -35,87 +39,60 @@ class MainActivity : AppCompatActivity() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
-    private val PERMISSION_REQUEST_CODE = 1
-    private val SCREENSHOT_REQUEST_CODE = 2
+    private val storagePermissionRequestCode = 1
+    private val scheduledExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+
+    private val mediaProjectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val intent = result.data
+            mediaProjection = mediaProjectionManager.getMediaProjection(result.resultCode, intent!!)
+            startCapture()
+        } else {
+            Log.e("ScreenCapture", "Screen capture permission denied")
+            showToast("Screen capture permission denied")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // MediaProjectionManager 초기화
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
-        // 화면 캡처 권한 확인 및 요청
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.MANAGE_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // Android 11 이상 에서는 MANAGE_EXTERNAL_STORAGE 권한 요청
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.MANAGE_EXTERNAL_STORAGE),
-                    PERMISSION_REQUEST_CODE
-                )
-            } else {
-                // Android 11 미만 에서는 WRITE_EXTERNAL_STORAGE 권한 요청
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                    PERMISSION_REQUEST_CODE
-                )
-            }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), storagePermissionRequestCode)
         } else {
             startScreenCapture()
         }
     }
 
-    // 화면 캡처 권한 요청 결과 처리
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
+        if (requestCode == storagePermissionRequestCode) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScreenCapture()
             } else {
                 Log.e("ScreenCapture", "Storage permission denied")
-                finish()
+                showToast("Storage permission denied")
             }
         }
     }
 
-    // 화면 캡처 시작
     private fun startScreenCapture() {
         val intent = mediaProjectionManager.createScreenCaptureIntent()
-        startActivityForResult(intent, SCREENSHOT_REQUEST_CODE)
+        mediaProjectionLauncher.launch(intent)
+
+        val serviceIntent = Intent(this, ScreenCaptureService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent)
     }
 
-    // 화면 캡처 권한 요청 결과 처리
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == SCREENSHOT_REQUEST_CODE) {
-            if (resultCode == RESULT_OK) {
-                mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data!!)
-                startCapture()
-            } else {
-                Log.e("ScreenCapture", "Screen capture permission denied")
-                finish()
-            }
-        }
-    }
-
-    // 화면 캡처 시작
     private fun startCapture() {
-        val metrics = resources.displayMetrics
+        val metrics = DisplayMetrics().also { windowManager.defaultDisplay.getMetrics(it) }
         val density = metrics.densityDpi
         val width = metrics.widthPixels
         val height = metrics.heightPixels
 
-        imageReader = ImageReader.newInstance(width, height, ImageFormat.FLEX_RGBA_8888, 2)
+        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
 
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             "ScreenCapture",
@@ -124,25 +101,17 @@ class MainActivity : AppCompatActivity() {
             imageReader?.surface, null, null
         )
 
-        // 1분마다 화면 캡처 반복
-        val handler = Handler(Looper.getMainLooper())
-        val delay = TimeUnit.MINUTES.toMillis(1)
-
-        handler.postDelayed(object : Runnable {
-            override fun run() {
-                captureScreen()
-                handler.postDelayed(this, delay)
-            }
-        }, delay)
+        scheduledExecutor.scheduleAtFixedRate({
+            captureScreen()
+        }, 0, 1, TimeUnit.MINUTES)
     }
 
-    // 화면 캡처
     private fun captureScreen() {
         val image = imageReader?.acquireLatestImage()
 
         if (image != null) {
             val planes = image.planes
-            val buffer = planes[0].buffer
+            val buffer: ByteBuffer = planes[0].buffer
             val pixelStride = planes[0].pixelStride
             val rowStride = planes[0].rowStride
             val rowPadding = rowStride - pixelStride * image.width
@@ -159,42 +128,63 @@ class MainActivity : AppCompatActivity() {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             val byteArray = outputStream.toByteArray()
+            val base64String: String = Base64.encodeToString(byteArray, Base64.DEFAULT)
 
-            val base64String = Base64.encodeToString(byteArray, Base64.DEFAULT)
             sendImageToServer(base64String)
+        } else {
+            Log.e("ScreenCapture", "Image is null")
         }
     }
 
-    // 서버로 이미지 전송
     private fun sendImageToServer(base64String: String) {
-        val client = OkHttpClient()
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
         val requestBody = base64String.toRequestBody("text/plain".toMediaTypeOrNull())
+        val serverUrl = "http://10.125.121.227:8080/upload"
 
         val request = Request.Builder()
-            .url("http://10.0.2.2:8080/upload")
+            .url(serverUrl)
             .post(requestBody)
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("ScreenCapture", "Failed to send image to server: ${e.message}")
+                // 재시도 로직 추가
+                scheduledExecutor.schedule({
+                    sendImageToServer(base64String)
+                }, 1, TimeUnit.MINUTES)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                Log.d("ScreenCapture", "Image sent to server successfully")
+                if (response.isSuccessful) {
+                    Log.d("ScreenCapture", "Image sent to server successfully")
+                } else {
+                    Log.e("ScreenCapture", "Failed to send image to server: ${response.message}")
+                }
             }
         })
     }
 
-    // 앱 종료 시 캡처 중지
     override fun onDestroy() {
         super.onDestroy()
         stopCapture()
+
+        val serviceIntent = Intent(this, ScreenCaptureService::class.java)
+        stopService(serviceIntent)
     }
 
-    // 캡처 중지
     private fun stopCapture() {
         virtualDisplay?.release()
         mediaProjection?.stop()
+        scheduledExecutor.shutdown()
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }
