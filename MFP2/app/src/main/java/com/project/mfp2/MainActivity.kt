@@ -1,4 +1,4 @@
-package com.project.mfp;
+package com.project.mfp2
 
 import android.Manifest
 import android.content.Context
@@ -20,9 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.codec.Encoder
-import com.project.mfp.R
-import com.project.mfp.ScreenCaptureService
+import com.project.mfp2.R
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -143,8 +141,12 @@ class MainActivity : AppCompatActivity() {
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 
-        val requestBody = base64String.toRequestBody("text/plain".toMediaTypeOrNull())
-        val serverUrl = "http://192.168.219.100:8080/upload"
+        // Base64 인코딩 옵션 수정
+        val encodedString = Base64.encodeToString(base64String.toByteArray(), Base64.NO_WRAP)
+        val requestBody = encodedString.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        // EC2 인스턴스의 퍼블릭 IP 주소로 변경
+        val serverUrl = "http://ec2-52-78-31-144.ap-northeast-2.compute.amazonaws.com:8080/upload"
 
         val request = Request.Builder()
             .url(serverUrl)
