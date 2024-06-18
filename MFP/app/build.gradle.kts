@@ -28,19 +28,19 @@ android {
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.2.0")
-    implementation("com.google.android.material:material:1.3.0")
-    implementation("com.squareup.okhttp3:okhttp:4.9.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
     // AndroidX Test libraries
-    androidTestImplementation("androidx.test.ext:junit:1.1.3")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
     // JUnit
     testImplementation("junit:junit:4.13.2")
 
     testImplementation(kotlin("test"))  // Kotlin 테스트 라이브러리
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")  // JUnit Jupiter API
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")  // JUnit Jupiter 엔진
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")  // JUnit Jupiter API
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")  // JUnit Jupiter 엔진
 }
 
 tasks.withType<Test> {

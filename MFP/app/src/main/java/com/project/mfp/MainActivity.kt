@@ -1,4 +1,4 @@
-package com.example.screencaptureapp
+package com.project.mfp
 
 import android.Manifest
 import android.content.Context
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.MANAGE_EXTERNAL_STORAGE
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // Android 11 이상에서는 MANAGE_EXTERNAL_STORAGE 권한 요청
+            // Android 11 이상 에서는 MANAGE_EXTERNAL_STORAGE 권한 요청
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 ActivityCompat.requestPermissions(
                     this,
@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
                     PERMISSION_REQUEST_CODE
                 )
             } else {
-                // Android 11 미만에서는 WRITE_EXTERNAL_STORAGE 권한 요청
+                // Android 11 미만 에서는 WRITE_EXTERNAL_STORAGE 권한 요청
                 ActivityCompat.requestPermissions(
                     this,
                     arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
