@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.project.mfp2.R
 
 class ScreenCaptureService : Service() {
 

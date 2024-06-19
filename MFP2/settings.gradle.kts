@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MFP"
+rootProject.name = "MFP2"
 include(":app")
