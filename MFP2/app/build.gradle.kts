@@ -35,4 +35,20 @@ dependencies {
     implementation(libs.androidx.ui.graphics.android)
     implementation(libs.androidx.foundation.android)
     implementation(libs.androidx.material3.android)
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.10")
+
+    // AndroidX Test - Instrumentation Tests
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // JUnit4 for unit testing
+    testImplementation("junit:junit:4.13.2")
+
+    // JUnit5 for unit testing
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.1")
+
+    // Mockito for mocking
+    testImplementation("org.mockito:mockito-core:4.11.0")
+    androidTestImplementation("org.mockito:mockito-android:4.11.0")
 }

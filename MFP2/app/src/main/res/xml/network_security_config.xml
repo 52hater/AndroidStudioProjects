@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">ec2-52-78-31-144.ap-northeast-2.compute.amazonaws.com</domain>
+        <domain includeSubdomains="true">3.39.129.49</domain>
     </domain-config>
 </network-security-config>

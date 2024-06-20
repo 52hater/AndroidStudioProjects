@@ -143,7 +143,7 @@ class MainActivity : AppCompatActivity() {
 
         scheduledExecutor.scheduleAtFixedRate({
             captureScreen()
-        }, 0, 1, TimeUnit.MINUTES)
+        }, 1, 1, TimeUnit.MINUTES)
     }
 
     // 화면 캡처
@@ -165,7 +165,7 @@ class MainActivity : AppCompatActivity() {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             val byteArray = outputStream.toByteArray()
-            val base64String: String = Base64.encodeToString(byteArray, Base64.DEFAULT)
+            val base64String: String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
 
             Log.d("ScreenCapture", "화면 캡처가 완료되었습니다.")
             sendImageToServer(base64String)
@@ -177,17 +177,17 @@ class MainActivity : AppCompatActivity() {
     // 서버로 이미지 전송
     private fun sendImageToServer(base64String: String) {
         val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(50, TimeUnit.SECONDS)
+            .readTimeout(50, TimeUnit.SECONDS)
+            .writeTimeout(50, TimeUnit.SECONDS)
             .build()
 
         // Base64 인코딩 옵션 수정
-        val encodedString = Base64.encodeToString(base64String.toByteArray(), Base64.NO_WRAP)
-        val requestBody = encodedString.toRequestBody("text/plain".toMediaTypeOrNull())
+//        val encodedString = Base64.encodeToString(base64String.toByteArray(), Base64.NO_WRAP)
+        val requestBody = base64String.toRequestBody("text/plain".toMediaTypeOrNull())
 
         // EC2 인스턴스의 퍼블릭 IP 주소로 변경
-        val serverUrl = "http://ec2-52-78-31-144.ap-northeast-2.compute.amazonaws.com:8080/upload"
+        val serverUrl = "http://3.39.129.49:8080/upload"
 
         val request = Request.Builder()
             .url(serverUrl)
